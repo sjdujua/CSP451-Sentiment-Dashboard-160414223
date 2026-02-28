@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hotel Sentiment Dashboard</title>
+</head>
+<body>
+
+<h2>Hotel Feedback Sentiment Analysis</h2>
+
+<textarea id="reviewText" rows="4" cols="60"
+placeholder="Enter hotel guest review here..."></textarea>
+<br><br>
+
+<button onclick="analyzeSentiment()">Analyze Sentiment</button>
+
+<h3>Result:</h3>
+<p id="result"></p>
+
+<script>
+async function analyzeSentiment() {
+
+    const text = document.getElementById("reviewText").value;
+
+    const endpoint = "https://sentiment-language-james.cognitiveservices.azure.com";
+    const key = "DGE6YlxMimTjWDryotg2BP76Pbvl9HLi2fFsCBuggkMBPiw87HQFJQQJ99CBACBsN54XJ3w3AAAaACOGLie1";
+
+    try {
+
+        // ---------------------------
+        // SENTIMENT ANALYSIS
+        // ---------------------------
+        const sentimentResponse = await fetch(endpoint + "/language/:analyze-text?api-version=2023-04-01", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Ocp-Apim-Subscription-Key": key
+            },
+            body: JSON.stringify({
+                kind: "SentimentAnalysis",
+                parameters: {
+                    opinionMining: true
+                },
+                analysisInput: {
+                    documents: [
+                        {
+                            id: "1",
+                            language: "en",
+                            text: text
+                        }
+                    ]
+                }
+            })
+        });
+
+        const sentimentData = await sentimentResponse.json();
+
+        const sentiment = sentimentData.results.documents[0].sentiment;
+        const confidence = sentimentData.results.documents[0].confidenceScores;
+
+        // ---------------------------
+        // KEY PHRASE EXTRACTION
+        // ---------------------------
+        const keyPhraseResponse = await fetch(endpoint + "/language/:analyze-text?api-version=2023-04-01", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Ocp-Apim-Subscription-Key": key
+            },
+            body: JSON.stringify({
+                kind: "KeyPhraseExtraction",
+                analysisInput: {
+                    documents: [
+                        {
+                            id: "1",
+                            language: "en",
+                            text: text
+                        }
+                    ]
+                }
+            })
+        });
+
+        const keyPhraseData = await keyPhraseResponse.json();
+        const keyPhrases = keyPhraseData.results.documents[0].keyPhrases;
+
+        // ---------------------------
+        // DISPLAY RESULTS
+        // ---------------------------
+        document.getElementById("result").innerHTML =
+            "<strong>Sentiment:</strong> " + sentiment +
+            "<br><strong>Positive Score:</strong> " + confidence.positive +
+            "<br><strong>Neutral Score:</strong> " + confidence.neutral +
+            "<br><strong>Negative Score:</strong> " + confidence.negative +
+            "<br><br><strong>Key Phrases:</strong> " + keyPhrases.join(", ");
+
+    } catch (error) {
+        document.getElementById("result").innerHTML = "Error analyzing text. Check console.";
+        console.error(error);
+    }
+}
+</script>
+
+</body>
+</html>
